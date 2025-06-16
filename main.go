@@ -1,22 +1,31 @@
 package main
 
 import (
+	"capital-tracker/handler"
+	dbmodel "capital-tracker/model"
+	"capital-tracker/repository"
 	"fmt"
 	"os"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/joho/godotenv"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
 )
 
 type model struct {
 	cursor   int
 	choices  []string
 	selected string
+	content  string
 }
+
+var h handler.Handler
 
 func initialModel() model {
 	return model{
 		// choices to display
-		choices: []string{"Transactions", "Exit"},
+		choices: []string{"List Transactions", "Exit"},
 	}
 }
 
@@ -47,7 +56,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "enter":
 			switch m.cursor {
 			case 0:
-				m.selected = "List Transactions"
+				m.selected = "list_transaction"
+				m.content = h.ListTransaction()
 			case 1:
 				return m, tea.Quit
 			}
@@ -70,14 +80,29 @@ func (m model) View() string {
 	}
 
 	if m.selected != "" {
-		s += fmt.Sprintf("\n%s\n", m.selected)
+		s += "\n" + m.content
 	}
 
 	s += "\nPress q to quit."
 	return s
 }
 
+func init() {
+	godotenv.Load()
+}
+
 func main() {
+	db, err := gorm.Open(sqlite.Open("file:db/capital_tracker.db"), &gorm.Config{})
+	if err != nil {
+		panic("failed to connect database")
+	}
+
+	// migration
+	db.AutoMigrate(&dbmodel.Transaction{})
+
+	repo := repository.InitRepository(db)
+	h = handler.InitHandler(&repo)
+
 	p := tea.NewProgram(initialModel())
 	if _, err := p.Run(); err != nil {
 		fmt.Println("Error running program:", err)
