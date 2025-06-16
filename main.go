@@ -2,6 +2,7 @@ package main
 
 import (
 	"capital-tracker/handler"
+	"capital-tracker/lib/constant"
 	dbmodel "capital-tracker/model"
 	"capital-tracker/repository"
 	"fmt"
@@ -14,18 +15,17 @@ import (
 )
 
 type model struct {
-	cursor   int
-	choices  []string
-	selected string
-	content  string
+	cursor  int
+	choices []string
+	screen  constant.InputState
 }
 
 var h handler.Handler
 
 func initialModel() model {
 	return model{
-		// choices to display
-		choices: []string{"List Transactions", "Exit"},
+		choices: []string{"List Transactions", "Exit"}, // menu list
+		screen:  constant.ModeMenu,                     // default menu
 	}
 }
 
@@ -40,7 +40,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "ctrl+c", "q":
+		case "ctrl+c":
+			m.screen = constant.ModeMenu
+
+		case "q":
 			return m, tea.Quit
 
 		case "up":
@@ -56,8 +59,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "enter":
 			switch m.cursor {
 			case 0:
-				m.selected = "list_transaction"
-				m.content = h.ListTransaction()
+				m.screen = constant.ModeListTransaction
 			case 1:
 				return m, tea.Quit
 			}
@@ -69,22 +71,25 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 // view renders the UI
 func (m model) View() string {
-	s := "Use ↑ ↓ to move, Enter to select:\n\n"
+	switch m.screen {
+	case constant.ModeMenu:
+		s := "Use ↑ ↓ to move, Enter to select:\n\n"
 
-	for i, choice := range m.choices {
-		cursor := " " // no cursor
-		if m.cursor == i {
-			cursor = ">" // current cursor
+		for i, choice := range m.choices {
+			cursor := " " // no cursor
+			if m.cursor == i {
+				cursor = ">" // current cursor
+			}
+			s += fmt.Sprintf("%s %s\n", cursor, choice)
 		}
-		s += fmt.Sprintf("%s %s\n", cursor, choice)
+
+		s += "\nPress q to quit."
+		return s
+	case constant.ModeListTransaction:
+		return h.ListTransaction()
 	}
 
-	if m.selected != "" {
-		s += "\n" + m.content
-	}
-
-	s += "\nPress q to quit."
-	return s
+	return ""
 }
 
 func init() {
