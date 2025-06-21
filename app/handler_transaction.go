@@ -1,12 +1,16 @@
-package handler
+package app
 
 import (
 	"capital-tracker/lib"
+	"capital-tracker/lib/constant"
+	"capital-tracker/model"
 	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/dustin/go-humanize"
 	"github.com/fatih/color"
 )
@@ -126,4 +130,144 @@ func (h *Handler) ListTransaction() string {
 	}
 
 	return builder.String()
+}
+
+func (h *Handler) Update_CreateTransaction(app *App, msg tea.KeyMsg) {
+	switch msg.Type {
+	case tea.KeyCtrlC:
+		app.Screen = constant.ModeMenu
+	case tea.KeyEnter:
+		// save current input
+		app.CreateTransaction.FormValues = append(app.CreateTransaction.FormValues, app.CreateTransaction.CurrentInput)
+		app.CreateTransaction.CurrentInput = ""
+		app.CreateTransaction.FormStep++
+
+		if app.CreateTransaction.FormStep >= len(app.CreateTransaction.FormFields) {
+			transaction := model.Transaction{}
+			// validate & convert input data
+			validationErrMsgList := ""
+			for i, formValue := range app.CreateTransaction.FormValues {
+				// transaction type
+				if i == 0 {
+					msg := fmt.Sprintf("- %s is required, has to be BUY/SELL\n", app.CreateTransaction.FormFields[i])
+					validationErrMsg := ""
+
+					if formValue == "" {
+						validationErrMsg = msg
+					}
+					if validationErrMsg == "" && formValue != "BUY" && formValue != "SELL" {
+						validationErrMsg = msg
+					}
+
+					validationErrMsgList += validationErrMsg
+					transaction.TransactionType = formValue
+				}
+
+				// token
+				if i == 1 {
+					msg := fmt.Sprintf("- %s is required\n", app.CreateTransaction.FormFields[i])
+					validationErrMsg := ""
+
+					if formValue == "" {
+						validationErrMsg = msg
+					}
+
+					validationErrMsgList += validationErrMsg
+					transaction.Token = formValue
+				}
+
+				// date
+				if i == 2 {
+					msg := fmt.Sprintf("- %s is required, and has to follow (DD/MM/YYYY HH:MM) format\n", app.CreateTransaction.FormFields[i])
+					validationErrMsg := ""
+					layout := "02/01/2006 15:04"
+
+					if formValue == "" {
+						validationErrMsg = msg
+					}
+					_, err := time.Parse(layout, formValue)
+					if validationErrMsg == "" && err != nil {
+						validationErrMsg = msg
+					}
+
+					validationErrMsgList += validationErrMsg
+					transaction.Date = formValue
+				}
+
+				// market price
+				if i == 3 {
+					msg := fmt.Sprintf("- %s is required, and has to be decimal number\n", app.CreateTransaction.FormFields[i])
+					validationErrMsg := ""
+
+					if formValue == "" {
+						validationErrMsg = msg
+					}
+					marketPrice, err := strconv.ParseFloat(formValue, 64)
+					if validationErrMsg == "" && err != nil {
+						validationErrMsg = msg
+					}
+
+					validationErrMsgList += validationErrMsg
+					transaction.MarketPrice = marketPrice
+				}
+
+				// quantity
+				if i == 4 {
+					msg := fmt.Sprintf("- %s is required, and has to be decimal number\n", app.CreateTransaction.FormFields[i])
+					validationErrMsg := ""
+
+					if formValue == "" {
+						validationErrMsg = msg
+					}
+					quantity, err := strconv.ParseFloat(formValue, 64)
+					if validationErrMsg == "" && err != nil {
+						validationErrMsg = msg
+					}
+
+					validationErrMsgList += validationErrMsg
+					transaction.Quantity = quantity
+				}
+
+				// amount
+				if i == 5 {
+					msg := fmt.Sprintf("- %s is required, and has to be decimal number\n", app.CreateTransaction.FormFields[i])
+					validationErrMsg := ""
+
+					if formValue == "" {
+						validationErrMsg = msg
+					}
+					amount, err := strconv.ParseFloat(formValue, 64)
+					if validationErrMsg == "" && err != nil {
+						validationErrMsg = msg
+					}
+
+					validationErrMsgList += validationErrMsg
+					transaction.Amount = amount
+				}
+			}
+			isValidationPass := validationErrMsgList == ""
+			if !isValidationPass {
+				app.Menu.Content = "❌ Transaction not saved!\n" + validationErrMsgList
+				app.Screen = constant.ModeMenu
+			}
+
+			// save transaction data to db
+			if isValidationPass {
+				_, err := h.repo.CreateTransaction(transaction)
+				if err != nil {
+					app.Menu.Content = fmt.Sprintf("❌ [ERROR] repository.create_transaction: %s", err.Error())
+				} else {
+					app.Menu.Content = "✅ Transaction saved!\n" + strings.Join(app.CreateTransaction.FormValues, " | ")
+				}
+
+				app.Screen = constant.ModeMenu
+			}
+		}
+	case tea.KeyBackspace:
+		if len(app.CreateTransaction.CurrentInput) > 0 {
+			app.CreateTransaction.CurrentInput = app.CreateTransaction.CurrentInput[:len(app.CreateTransaction.CurrentInput)-1]
+		}
+	default:
+		app.CreateTransaction.CurrentInput += msg.String()
+	}
 }
