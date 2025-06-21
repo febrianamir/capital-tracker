@@ -88,7 +88,10 @@ func (h *Handler) ListTransaction() string {
 	styleBold := color.New(color.Bold).SprintFunc()
 	styleItalic := color.New(color.Italic).SprintFunc()
 
-	transactions := h.repo.GetTransactions()
+	transactions, err := h.repo.GetTransactions()
+	if err != nil {
+		return fmt.Sprintf("[ERROR] repository.get_transactions: %s", err.Error())
+	}
 
 	// each item in renderedContents represent one line
 	renderedContents := []string{}
