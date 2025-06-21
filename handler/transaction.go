@@ -1,13 +1,9 @@
 package handler
 
 import (
-	"encoding/json"
+	"capital-tracker/lib"
 	"fmt"
-	"io"
-	"log"
 	"net/http"
-	"net/url"
-	"os"
 	"strconv"
 	"strings"
 
@@ -39,47 +35,25 @@ func printLine(str string) string {
 	return fmt.Sprintf("%s\n", str)
 }
 
-type Quotes struct {
-	Data map[string]QuoteData `json:"data"`
-}
+type CoinList []Coin
 
-type QuoteData struct {
-	Quote struct {
-		USD struct {
-			Price float64 `json:"price"`
-		} `json:"USD"`
-	} `json:"quote"`
+type Coin struct {
+	ID           string  `json:"id"`
+	Symbol       string  `json:"symbol"`
+	Name         string  `json:"name"`
+	CurrentPrice float64 `json:"current_price"`
 }
 
 func (h *Handler) ListTransaction() string {
 	var builder strings.Builder
 
-	client := &http.Client{}
-	req, err := http.NewRequest("GET", "https://pro-api.coinmarketcap.com/v2/cryptocurrency/quotes/latest", nil)
+	coins, err := lib.DoRequest[CoinList](http.MethodGet, "/coins/markets", map[string]string{
+		"vs_currency": "usd",
+		"ids":         "bitcoin",
+		"precision":   "2",
+	})
 	if err != nil {
-		log.Print(err)
-		os.Exit(1)
-	}
-
-	q := url.Values{}
-	id := "1"
-	q.Add("id", id)
-	q.Add("convert", "USD")
-
-	req.Header.Set("Accepts", "application/json")
-	req.Header.Add("X-CMC_PRO_API_KEY", os.Getenv("CMC_API_KEY"))
-	req.URL.RawQuery = q.Encode()
-
-	resp, err := client.Do(req)
-	if err != nil {
-		fmt.Println("Error sending request to server")
-		os.Exit(1)
-	}
-	respBody, _ := io.ReadAll(resp.Body)
-
-	var quotes Quotes
-	if err := json.Unmarshal(respBody, &quotes); err != nil {
-		log.Fatal("Failed to unmarshal JSON:", err)
+		return fmt.Sprintln(err.Error())
 	}
 
 	colorCyan := color.New(color.FgCyan).SprintFunc()
@@ -99,7 +73,7 @@ func (h *Handler) ListTransaction() string {
 	renderedContents = append(renderedContents, "-------------------------------------------------------------------------------------------")
 	renderedContents = append(renderedContents, styleBold(colorCyan("BTC")))
 
-	tokenPrice := quotes.Data[id].Quote.USD.Price
+	tokenPrice := coins[0].CurrentPrice
 	tokenPriceFormatted := formatPrice("%g", tokenPrice)
 	if tokenPrice > 100000 {
 		tokenPriceFormatted = formatPrice("%.2f", tokenPrice)
