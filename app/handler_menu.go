@@ -54,6 +54,6 @@ func (h *Handler) View_Menu(app *App) string {
 		s += "\n" + app.Menu.Content
 	}
 
-	s += "\nPress q to quit."
+	s += "\nPress q to quit.\n"
 	return s
 }

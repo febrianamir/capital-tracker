@@ -5,6 +5,7 @@ import (
 	"capital-tracker/model"
 	"capital-tracker/repository"
 	"fmt"
+	"log"
 	"os"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -13,11 +14,22 @@ import (
 	"gorm.io/gorm"
 )
 
+var logFile *os.File
+
 func init() {
+	var err error
+	logFile, err = os.Create("debug.log")
+	if err != nil {
+		panic(err)
+	}
+	log.SetOutput(logFile)
+
 	godotenv.Load()
 }
 
 func main() {
+	defer logFile.Close()
+
 	db, err := gorm.Open(sqlite.Open("file:db/capital_tracker.db"), &gorm.Config{})
 	if err != nil {
 		panic("failed to connect database")

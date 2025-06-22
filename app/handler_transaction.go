@@ -16,11 +16,12 @@ import (
 	"github.com/fatih/color"
 )
 
-func (h *Handler) Update_ListTransaction(app *App, msg tea.KeyMsg) {
+func (h *Handler) Update_ListTransaction(app *App, msg tea.KeyMsg) (cmds []tea.Cmd) {
 	switch msg.Type {
 	case tea.KeyCtrlC:
 		if app.ListTransaction.SelectedChoice != "" {
 			app.ListTransaction.SelectedChoice = ""
+			return nil
 		}
 		if app.ListTransaction.SelectedChoice == "" {
 			app.Screen = constant.ModeMenu
@@ -38,7 +39,29 @@ func (h *Handler) Update_ListTransaction(app *App, msg tea.KeyMsg) {
 
 	case tea.KeyEnter:
 		app.ListTransaction.SelectedChoice = app.ListTransaction.Choices[app.ListTransaction.Cursor]
+		app.ListTransaction.IsLoading = true
+
+		tokens := map[string]string{
+			"BTC":  "bitcoin",
+			"HYPE": "hyperliquid",
+		}
+		queryParams := map[string]string{
+			"vs_currency": "usd",
+			"ids":         tokens[app.ListTransaction.SelectedChoice],
+			"precision":   "2",
+		}
+
+		cmds = append(cmds, app.Spinner.Tick, func() tea.Msg {
+			coins, err := lib.DoRequest[response.CoinList](http.MethodGet, "/coins/markets", queryParams)
+			if err != nil {
+				return AppResponseMsg{Error: err}
+			}
+
+			return AppResponseMsg{CoinListResponse: coins}
+		})
 	}
+
+	return cmds
 }
 
 func (h *Handler) View_ListTransaction(app *App) string {
@@ -55,21 +78,11 @@ func (h *Handler) View_ListTransaction(app *App) string {
 		return s
 	}
 
-	tokens := map[string]string{
-		"BTC":  "bitcoin",
-		"HYPE": "hyperliquid",
+	if app.ListTransaction.IsLoading {
+		return fmt.Sprintf("\n  %s Loading...\n\n", app.Spinner.View())
 	}
 
 	var builder strings.Builder
-
-	coins, err := lib.DoRequest[response.CoinList](http.MethodGet, "/coins/markets", map[string]string{
-		"vs_currency": "usd",
-		"ids":         tokens[app.ListTransaction.SelectedChoice],
-		"precision":   "2",
-	})
-	if err != nil {
-		return fmt.Sprintln(err.Error())
-	}
 
 	colorCyan := color.New(color.FgCyan).SprintFunc()
 	colorRed := color.New(color.FgRed).SprintFunc()
@@ -90,7 +103,7 @@ func (h *Handler) View_ListTransaction(app *App) string {
 	renderedContents = append(renderedContents, "-------------------------------------------------------------------------------------------")
 	renderedContents = append(renderedContents, styleBold(colorCyan(app.ListTransaction.SelectedChoice)))
 
-	tokenPrice := coins[0].CurrentPrice
+	tokenPrice := app.ListTransaction.CoinListResponse[0].CurrentPrice
 	tokenPriceFormatted := lib.FormatPrice("%g", tokenPrice)
 	if tokenPrice > 100000 {
 		tokenPriceFormatted = lib.FormatPrice("%.2f", tokenPrice)

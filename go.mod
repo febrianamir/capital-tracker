@@ -5,6 +5,7 @@ go 1.23.0
 toolchain go1.23.10
 
 require (
+	github.com/charmbracelet/bubbles v0.21.0
 	github.com/charmbracelet/bubbletea v1.3.5
 	github.com/dustin/go-humanize v1.0.1
 	github.com/fatih/color v1.18.0
