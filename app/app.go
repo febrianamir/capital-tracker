@@ -62,6 +62,6 @@ func InitApp(handler Handler) App {
 }
 
 // messages are handled here
-func (m App) Init() tea.Cmd {
+func (app App) Init() tea.Cmd {
 	return nil
 }

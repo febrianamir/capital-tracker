@@ -25,14 +25,17 @@ func (h *Handler) Update_ListTransaction(app *App, msg tea.KeyMsg) {
 		if app.ListTransaction.SelectedChoice == "" {
 			app.Screen = constant.ModeMenu
 		}
+
 	case tea.KeyUp:
 		if app.ListTransaction.Cursor > 0 {
 			app.ListTransaction.Cursor--
 		}
+
 	case tea.KeyDown:
 		if app.ListTransaction.Cursor < len(app.ListTransaction.Choices)-1 {
 			app.ListTransaction.Cursor++
 		}
+
 	case tea.KeyEnter:
 		app.ListTransaction.SelectedChoice = app.ListTransaction.Choices[app.ListTransaction.Cursor]
 	}
@@ -146,6 +149,7 @@ func (h *Handler) Update_CreateTransaction(app *App, msg tea.KeyMsg) {
 	switch msg.Type {
 	case tea.KeyCtrlC:
 		app.Screen = constant.ModeMenu
+
 	case tea.KeyEnter:
 		// save current input
 		app.CreateTransaction.FormValues = append(app.CreateTransaction.FormValues, app.CreateTransaction.CurrentInput)
@@ -273,11 +277,18 @@ func (h *Handler) Update_CreateTransaction(app *App, msg tea.KeyMsg) {
 				app.Screen = constant.ModeMenu
 			}
 		}
+
 	case tea.KeyBackspace:
 		if len(app.CreateTransaction.CurrentInput) > 0 {
 			app.CreateTransaction.CurrentInput = app.CreateTransaction.CurrentInput[:len(app.CreateTransaction.CurrentInput)-1]
 		}
+
 	default:
 		app.CreateTransaction.CurrentInput += msg.String()
 	}
+}
+
+func (h *Handler) View_CreateTransaction(app *App) string {
+	prompt := app.CreateTransaction.FormFieldDescriptions[app.CreateTransaction.FormStep]
+	return fmt.Sprintf("Enter %s:\n%s\n\n(Press Enter to continue)", prompt, app.CreateTransaction.CurrentInput)
 }

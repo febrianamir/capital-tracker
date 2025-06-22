@@ -7,45 +7,22 @@ import (
 )
 
 // update is where we handle input
-func (m App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (app App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 
 	case tea.KeyMsg:
-		switch m.Screen {
+		switch app.Screen {
 		case constant.ModeMenu:
-			switch msg.String() {
-			case "q":
-				return m, tea.Quit
-
-			case "up":
-				if m.Cursor > 0 {
-					m.Cursor--
-				}
-
-			case "down":
-				if m.Cursor < len(m.Choices)-1 {
-					m.Cursor++
-				}
-
-			case "enter":
-				switch m.Cursor {
-				case 0:
-					m.Screen = constant.ModeListTransaction
-				case 1:
-					m.Screen = constant.ModeCreateTransaction
-					m.CreateTransaction.FormValues = []string{}
-					m.CreateTransaction.FormStep = 0
-					m.CreateTransaction.CurrentInput = ""
-				case 2:
-					return m, tea.Quit
-				}
+			cmd := app.Handler.Update_Menu(&app, msg)
+			if cmd != nil {
+				return app, cmd
 			}
 		case constant.ModeListTransaction:
-			m.Handler.Update_ListTransaction(&m, msg)
+			app.Handler.Update_ListTransaction(&app, msg)
 		case constant.ModeCreateTransaction:
-			m.Handler.Update_CreateTransaction(&m, msg)
+			app.Handler.Update_CreateTransaction(&app, msg)
 		}
 	}
 
-	return m, nil
+	return app, nil
 }
