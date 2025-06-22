@@ -5,6 +5,7 @@ import (
 	"capital-tracker/lib/constant"
 	"capital-tracker/model"
 	"capital-tracker/param"
+	"capital-tracker/response"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -12,48 +13,8 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/dustin/go-humanize"
 	"github.com/fatih/color"
 )
-
-func formatPrice(printFormat string, price float64) string {
-	// format to two decimal places
-	priceStr := fmt.Sprintf(printFormat, price)
-
-	// split integer and fractional parts
-	parts := strings.Split(priceStr, ".")
-	intPartStr := parts[0]
-	var decimalPartStr string
-	if len(parts) > 1 {
-		decimalPartStr = parts[1]
-	}
-
-	// add comma formatting to the integer part
-	intPart, _ := strconv.Atoi(intPartStr)
-	intWithComma := humanize.Comma(int64(intPart))
-	if strings.Contains(intWithComma, ".") {
-		intWithComma = strings.Split(intWithComma, ".")[0]
-	}
-
-	// rejoin with decimal
-	if decimalPartStr != "" {
-		return intWithComma + "." + decimalPartStr
-	}
-	return intWithComma
-}
-
-func printLine(str string) string {
-	return fmt.Sprintf("%s\n", str)
-}
-
-type CoinList []Coin
-
-type Coin struct {
-	ID           string  `json:"id"`
-	Symbol       string  `json:"symbol"`
-	Name         string  `json:"name"`
-	CurrentPrice float64 `json:"current_price"`
-}
 
 func (h *Handler) Update_ListTransaction(app *App, msg tea.KeyMsg) {
 	switch msg.Type {
@@ -98,7 +59,7 @@ func (h *Handler) View_ListTransaction(app *App) string {
 
 	var builder strings.Builder
 
-	coins, err := lib.DoRequest[CoinList](http.MethodGet, "/coins/markets", map[string]string{
+	coins, err := lib.DoRequest[response.CoinList](http.MethodGet, "/coins/markets", map[string]string{
 		"vs_currency": "usd",
 		"ids":         tokens[app.ListTransaction.SelectedChoice],
 		"precision":   "2",
@@ -127,9 +88,9 @@ func (h *Handler) View_ListTransaction(app *App) string {
 	renderedContents = append(renderedContents, styleBold(colorCyan(app.ListTransaction.SelectedChoice)))
 
 	tokenPrice := coins[0].CurrentPrice
-	tokenPriceFormatted := formatPrice("%g", tokenPrice)
+	tokenPriceFormatted := lib.FormatPrice("%g", tokenPrice)
 	if tokenPrice > 100000 {
-		tokenPriceFormatted = formatPrice("%.2f", tokenPrice)
+		tokenPriceFormatted = lib.FormatPrice("%.2f", tokenPrice)
 	}
 	renderedContents = append(renderedContents, fmt.Sprintf("Current Price: $%s", tokenPriceFormatted))
 
@@ -141,8 +102,8 @@ func (h *Handler) View_ListTransaction(app *App) string {
 	}
 	totalCurrentAmount := totalQuantity * tokenPrice
 
-	renderedContents = append(renderedContents, fmt.Sprintf("Cost Basis: $%s", formatPrice("%.2f", costBasis)))
-	renderedContents = append(renderedContents, fmt.Sprintf("Current Amount: $%s (%.8f %s)", formatPrice("%.2f", totalCurrentAmount), totalQuantity, app.ListTransaction.SelectedChoice))
+	renderedContents = append(renderedContents, fmt.Sprintf("Cost Basis: $%s", lib.FormatPrice("%.2f", costBasis)))
+	renderedContents = append(renderedContents, fmt.Sprintf("Current Amount: $%s (%.8f %s)", lib.FormatPrice("%.2f", totalCurrentAmount), totalQuantity, app.ListTransaction.SelectedChoice))
 
 	totalPnlPercentage := ((totalCurrentAmount - costBasis) / costBasis) * 100
 	totalPnl := fmt.Sprintf("%.2f%%", totalPnlPercentage)
@@ -171,11 +132,11 @@ func (h *Handler) View_ListTransaction(app *App) string {
 		if transaction.TransactionType == "SELL" {
 			transactionType = colorRed(transactionType)
 		}
-		renderedContents = append(renderedContents, fmt.Sprintf(dataFormat, transactionType, transaction.Date, transaction.Token, formatPrice("%g", transaction.MarketPrice), transaction.Quantity, formatPrice("%.2f", transaction.Amount)))
+		renderedContents = append(renderedContents, fmt.Sprintf(dataFormat, transactionType, transaction.Date, transaction.Token, lib.FormatPrice("%g", transaction.MarketPrice), transaction.Quantity, lib.FormatPrice("%.2f", transaction.Amount)))
 	}
 
 	for _, renderedContent := range renderedContents {
-		builder.WriteString(printLine(renderedContent))
+		builder.WriteString(lib.PrintLine(renderedContent))
 	}
 
 	return builder.String()

@@ -6,6 +6,10 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strconv"
+	"strings"
+
+	"github.com/dustin/go-humanize"
 )
 
 type responseBody any
@@ -57,4 +61,34 @@ func parseResponse[T responseBody](rspBodyByte []byte) (T, error) {
 		return rspBody, err
 	}
 	return rspBody, nil
+}
+
+func FormatPrice(printFormat string, price float64) string {
+	// format to two decimal places
+	priceStr := fmt.Sprintf(printFormat, price)
+
+	// split integer and fractional parts
+	parts := strings.Split(priceStr, ".")
+	intPartStr := parts[0]
+	var decimalPartStr string
+	if len(parts) > 1 {
+		decimalPartStr = parts[1]
+	}
+
+	// add comma formatting to the integer part
+	intPart, _ := strconv.Atoi(intPartStr)
+	intWithComma := humanize.Comma(int64(intPart))
+	if strings.Contains(intWithComma, ".") {
+		intWithComma = strings.Split(intWithComma, ".")[0]
+	}
+
+	// rejoin with decimal
+	if decimalPartStr != "" {
+		return intWithComma + "." + decimalPartStr
+	}
+	return intWithComma
+}
+
+func PrintLine(str string) string {
+	return fmt.Sprintf("%s\n", str)
 }
