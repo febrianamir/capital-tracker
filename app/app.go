@@ -14,11 +14,18 @@ type App struct {
 	Screen  constant.InputState
 
 	Menu              Menu
+	ListTransaction   ListTransaction
 	CreateTransaction CreateTransaction
 }
 
 type Menu struct {
 	Content string
+}
+
+type ListTransaction struct {
+	Cursor         int
+	Choices        []string
+	SelectedChoice string
 }
 
 type CreateTransaction struct {
@@ -30,6 +37,8 @@ type CreateTransaction struct {
 }
 
 func InitApp(handler Handler) App {
+	tokens, _ := handler.repo.GetTransactionTokens()
+
 	return App{
 		Handler: handler,
 		Choices: []string{ // menu list
@@ -39,6 +48,11 @@ func InitApp(handler Handler) App {
 		},
 		Screen: constant.ModeMenu, // default menu
 
+		ListTransaction: ListTransaction{
+			Cursor:         0,
+			Choices:        tokens,
+			SelectedChoice: "",
+		},
 		CreateTransaction: CreateTransaction{
 			FormFields:            []string{"Transaction Type", "Token", "Date", "Market Price", "Quantity", "Amount"},
 			FormFieldDescriptions: []string{"Transaction Type (BUY/SELL)", "Token", "Date (DD/MM/YYYY HH:MM)", "Market Price", "Quantity", "Amount"},

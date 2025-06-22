@@ -26,7 +26,7 @@ func (m App) View() string {
 		s += "\nPress q to quit."
 		return s
 	case constant.ModeListTransaction:
-		return m.Handler.ListTransaction()
+		return m.Handler.View_ListTransaction(&m)
 	case constant.ModeCreateTransaction:
 		prompt := m.CreateTransaction.FormFieldDescriptions[m.CreateTransaction.FormStep]
 		return fmt.Sprintf("Enter %s:\n%s\n\n(Press Enter to continue)", prompt, m.CreateTransaction.CurrentInput)

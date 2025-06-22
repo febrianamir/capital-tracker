@@ -41,10 +41,7 @@ func (m App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 		case constant.ModeListTransaction:
-			switch msg.Type {
-			case tea.KeyCtrlC:
-				m.Screen = constant.ModeMenu
-			}
+			m.Handler.Update_ListTransaction(&m, msg)
 		case constant.ModeCreateTransaction:
 			m.Handler.Update_CreateTransaction(&m, msg)
 		}

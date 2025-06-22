@@ -4,6 +4,7 @@ import (
 	"capital-tracker/lib"
 	"capital-tracker/lib/constant"
 	"capital-tracker/model"
+	"capital-tracker/param"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -22,7 +23,10 @@ func formatPrice(printFormat string, price float64) string {
 	// split integer and fractional parts
 	parts := strings.Split(priceStr, ".")
 	intPartStr := parts[0]
-	decimalPartStr := parts[1]
+	var decimalPartStr string
+	if len(parts) > 1 {
+		decimalPartStr = parts[1]
+	}
 
 	// add comma formatting to the integer part
 	intPart, _ := strconv.Atoi(intPartStr)
@@ -32,7 +36,10 @@ func formatPrice(printFormat string, price float64) string {
 	}
 
 	// rejoin with decimal
-	return intWithComma + "." + decimalPartStr
+	if decimalPartStr != "" {
+		return intWithComma + "." + decimalPartStr
+	}
+	return intWithComma
 }
 
 func printLine(str string) string {
@@ -48,12 +55,52 @@ type Coin struct {
 	CurrentPrice float64 `json:"current_price"`
 }
 
-func (h *Handler) ListTransaction() string {
+func (h *Handler) Update_ListTransaction(app *App, msg tea.KeyMsg) {
+	switch msg.Type {
+	case tea.KeyCtrlC:
+		if app.ListTransaction.SelectedChoice != "" {
+			app.ListTransaction.SelectedChoice = ""
+		}
+		if app.ListTransaction.SelectedChoice == "" {
+			app.Screen = constant.ModeMenu
+		}
+	case tea.KeyUp:
+		if app.ListTransaction.Cursor > 0 {
+			app.ListTransaction.Cursor--
+		}
+	case tea.KeyDown:
+		if app.ListTransaction.Cursor < len(app.ListTransaction.Choices)-1 {
+			app.ListTransaction.Cursor++
+		}
+	case tea.KeyEnter:
+		app.ListTransaction.SelectedChoice = app.ListTransaction.Choices[app.ListTransaction.Cursor]
+	}
+}
+
+func (h *Handler) View_ListTransaction(app *App) string {
+	if app.ListTransaction.SelectedChoice == "" {
+		s := "[List Transaction] Use ↑ ↓ to move, Enter to select:\n\n"
+		for i, choice := range app.ListTransaction.Choices {
+			cursor := " " // no cursor
+			if app.ListTransaction.Cursor == i {
+				cursor = ">" // current cursor
+			}
+			s += fmt.Sprintf("%s %s\n", cursor, choice)
+		}
+
+		return s
+	}
+
+	tokens := map[string]string{
+		"BTC":  "bitcoin",
+		"HYPE": "hyperliquid",
+	}
+
 	var builder strings.Builder
 
 	coins, err := lib.DoRequest[CoinList](http.MethodGet, "/coins/markets", map[string]string{
 		"vs_currency": "usd",
-		"ids":         "bitcoin",
+		"ids":         tokens[app.ListTransaction.SelectedChoice],
 		"precision":   "2",
 	})
 	if err != nil {
@@ -66,7 +113,9 @@ func (h *Handler) ListTransaction() string {
 	styleBold := color.New(color.Bold).SprintFunc()
 	styleItalic := color.New(color.Italic).SprintFunc()
 
-	transactions, err := h.repo.GetTransactions()
+	transactions, err := h.repo.GetTransactions(param.GetTransactions{
+		Token: app.ListTransaction.SelectedChoice,
+	})
 	if err != nil {
 		return fmt.Sprintf("[ERROR] repository.get_transactions: %s", err.Error())
 	}
@@ -75,7 +124,7 @@ func (h *Handler) ListTransaction() string {
 	renderedContents := []string{}
 
 	renderedContents = append(renderedContents, "-------------------------------------------------------------------------------------------")
-	renderedContents = append(renderedContents, styleBold(colorCyan("BTC")))
+	renderedContents = append(renderedContents, styleBold(colorCyan(app.ListTransaction.SelectedChoice)))
 
 	tokenPrice := coins[0].CurrentPrice
 	tokenPriceFormatted := formatPrice("%g", tokenPrice)
@@ -93,7 +142,7 @@ func (h *Handler) ListTransaction() string {
 	totalCurrentAmount := totalQuantity * tokenPrice
 
 	renderedContents = append(renderedContents, fmt.Sprintf("Cost Basis: $%s", formatPrice("%.2f", costBasis)))
-	renderedContents = append(renderedContents, fmt.Sprintf("Current Amount: $%s (%.8f BTC)", formatPrice("%.2f", totalCurrentAmount), totalQuantity))
+	renderedContents = append(renderedContents, fmt.Sprintf("Current Amount: $%s (%.8f %s)", formatPrice("%.2f", totalCurrentAmount), totalQuantity, app.ListTransaction.SelectedChoice))
 
 	totalPnlPercentage := ((totalCurrentAmount - costBasis) / costBasis) * 100
 	totalPnl := fmt.Sprintf("%.2f%%", totalPnlPercentage)
