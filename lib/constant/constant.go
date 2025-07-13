@@ -4,6 +4,7 @@ type InputState int
 
 const (
 	ModeMenu InputState = iota
+	ModeListWatchlist
 	ModeListTransaction
 	ModeCreateTransaction
 )

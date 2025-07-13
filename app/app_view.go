@@ -9,6 +9,8 @@ func (app App) View() string {
 	switch app.Screen {
 	case constant.ModeMenu:
 		return app.Handler.View_Menu(&app)
+	case constant.ModeListWatchlist:
+		return app.Handler.View_ListWatchlist(&app)
 	case constant.ModeListTransaction:
 		return app.Handler.View_ListTransaction(&app)
 	case constant.ModeCreateTransaction:

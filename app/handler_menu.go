@@ -25,13 +25,17 @@ func (h *Handler) Update_Menu(app *App, msg tea.KeyMsg) tea.Cmd {
 	case "enter":
 		switch app.Cursor {
 		case 0:
-			app.Screen = constant.ModeListTransaction
+			app.Screen = constant.ModeListWatchlist
+			cmds := h.startListWatchlistApi(app)
+			return tea.Batch(cmds...)
 		case 1:
+			app.Screen = constant.ModeListTransaction
+		case 2:
 			app.Screen = constant.ModeCreateTransaction
 			app.CreateTransaction.FormValues = []string{}
 			app.CreateTransaction.FormStep = 0
 			app.CreateTransaction.CurrentInput = ""
-		case 2:
+		case 3:
 			return tea.Quit
 		}
 	}

@@ -2,6 +2,8 @@ package app
 
 import (
 	"capital-tracker/lib/constant"
+	"capital-tracker/model"
+	"capital-tracker/param"
 	"capital-tracker/response"
 
 	"github.com/charmbracelet/bubbles/spinner"
@@ -19,12 +21,20 @@ type App struct {
 	Spinner spinner.Model
 
 	Menu              Menu
+	ListWatchlist     ListWatchlist
 	ListTransaction   ListTransaction
 	CreateTransaction CreateTransaction
 }
 
 type Menu struct {
 	Content string
+}
+
+type ListWatchlist struct {
+	Watchlists       []model.Token
+	IsLoading        bool
+	CoinListResponse response.CoinList
+	Error            error
 }
 
 type ListTransaction struct {
@@ -57,12 +67,17 @@ func InitApp(handler Handler) App {
 	s.Style = spinnerStyle
 
 	tokens, _ := handler.repo.GetTransactionTokens()
+	isWatchlist := true
+	watchlists, _ := handler.repo.GetTokens(param.GetTokens{
+		IsWatchlist: &isWatchlist,
+	})
 
 	return App{
 		Handler: handler,
 
 		Cursor: 0,
 		Choices: []string{ // menu list
+			"List Watchlist",
 			"List Transactions",
 			"Create Transaction",
 			"Exit",
@@ -71,6 +86,9 @@ func InitApp(handler Handler) App {
 		Screen:  constant.ModeMenu, // default menu
 		Spinner: s,
 
+		ListWatchlist: ListWatchlist{
+			Watchlists: watchlists,
+		},
 		ListTransaction: ListTransaction{
 			Cursor:         0,
 			Choices:        tokens,

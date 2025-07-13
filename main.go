@@ -36,7 +36,10 @@ func main() {
 	}
 
 	// migration
-	db.AutoMigrate(&model.Transaction{})
+	db.AutoMigrate(
+		&model.Transaction{},
+		&model.Token{},
+	)
 
 	repo := repository.InitRepository(db)
 	h := app.InitHandler(&repo)
