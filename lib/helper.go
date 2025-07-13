@@ -1,6 +1,8 @@
 package lib
 
 import (
+	"capital-tracker/lib/constant"
+	"capital-tracker/model"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -91,4 +93,37 @@ func FormatPrice(printFormat string, price float64) string {
 
 func PrintLine(str string) string {
 	return fmt.Sprintf("%s\n", str)
+}
+
+type CalculateHoldingStatRes struct {
+	CostBasis          float64
+	TotalQuantity      float64
+	TotalCurrentAmount float64
+	TotalPnlPercentage float64
+	TotalPnlAmount     float64
+}
+
+func CalculateHoldingStats(transactions []model.Transaction, tokenPrice float64) (res CalculateHoldingStatRes) {
+	totalBuyAmount := 0.0
+	totalSellAmount := 0.0
+
+	for _, transaction := range transactions {
+		switch transaction.TransactionType {
+		case constant.TransactionTypeBuy:
+			totalBuyAmount += transaction.Amount
+			res.TotalQuantity += transaction.Quantity
+		case constant.TransactionTypeSell:
+			totalSellAmount += transaction.Amount
+			res.TotalQuantity -= transaction.Quantity
+		}
+	}
+
+	if res.TotalQuantity <= 0 {
+		res.TotalQuantity = 0
+	}
+	res.CostBasis += totalBuyAmount
+	res.TotalCurrentAmount = res.TotalQuantity * tokenPrice
+	res.TotalPnlAmount = (res.TotalCurrentAmount + totalSellAmount) - res.CostBasis
+	res.TotalPnlPercentage = (res.TotalPnlAmount / res.CostBasis) * 100
+	return res
 }

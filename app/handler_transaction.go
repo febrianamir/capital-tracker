@@ -3,6 +3,7 @@ package app
 import (
 	"capital-tracker/lib"
 	"capital-tracker/lib/constant"
+	"capital-tracker/lib/style"
 	"capital-tracker/model"
 	"capital-tracker/param"
 	"capital-tracker/response"
@@ -13,7 +14,6 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/fatih/color"
 )
 
 func (h *Handler) Update_ListTransaction(app *App, msg tea.KeyMsg) (cmds []tea.Cmd) {
@@ -84,14 +84,9 @@ func (h *Handler) View_ListTransaction(app *App) string {
 
 	var builder strings.Builder
 
-	colorCyan := color.New(color.FgCyan).SprintFunc()
-	colorRed := color.New(color.FgRed).SprintFunc()
-	colorGreen := color.New(color.FgGreen).SprintFunc()
-	styleBold := color.New(color.Bold).SprintFunc()
-	styleItalic := color.New(color.Italic).SprintFunc()
-
+	token := app.ListTransaction.SelectedChoice
 	transactions, err := h.repo.GetTransactions(param.GetTransactions{
-		Token: app.ListTransaction.SelectedChoice,
+		Token: token,
 	})
 	if err != nil {
 		return fmt.Sprintf("[ERROR] repository.get_transactions: %s", err.Error())
@@ -101,7 +96,7 @@ func (h *Handler) View_ListTransaction(app *App) string {
 	renderedContents := []string{}
 
 	renderedContents = append(renderedContents, "-------------------------------------------------------------------------------------------")
-	renderedContents = append(renderedContents, styleBold(colorCyan(app.ListTransaction.SelectedChoice)))
+	renderedContents = append(renderedContents, style.FontBold(style.ColorCyan(app.ListTransaction.SelectedChoice)))
 
 	tokenPrice := app.ListTransaction.CoinListResponse[0].CurrentPrice
 	tokenPriceFormatted := lib.FormatPrice("%g", tokenPrice)
@@ -110,24 +105,17 @@ func (h *Handler) View_ListTransaction(app *App) string {
 	}
 	renderedContents = append(renderedContents, fmt.Sprintf("Current Price: $%s", tokenPriceFormatted))
 
-	costBasis := 0.0
-	totalQuantity := 0.0
-	for _, transaction := range transactions {
-		costBasis += transaction.Amount
-		totalQuantity += transaction.Quantity
-	}
-	totalCurrentAmount := totalQuantity * tokenPrice
+	holdingStat := lib.CalculateHoldingStats(transactions, tokenPrice)
 
-	renderedContents = append(renderedContents, fmt.Sprintf("Cost Basis: $%s", lib.FormatPrice("%.2f", costBasis)))
-	renderedContents = append(renderedContents, fmt.Sprintf("Current Amount: $%s (%.8f %s)", lib.FormatPrice("%.2f", totalCurrentAmount), totalQuantity, app.ListTransaction.SelectedChoice))
+	renderedContents = append(renderedContents, fmt.Sprintf("Cost Basis: $%s", lib.FormatPrice("%.2f", holdingStat.CostBasis)))
+	renderedContents = append(renderedContents, fmt.Sprintf("Current Amount: $%s (%.8f %s)", lib.FormatPrice("%.2f", holdingStat.TotalCurrentAmount), holdingStat.TotalQuantity, app.ListTransaction.SelectedChoice))
 
-	totalPnlPercentage := ((totalCurrentAmount - costBasis) / costBasis) * 100
-	totalPnl := fmt.Sprintf("%.2f%%", totalPnlPercentage)
-	if totalPnlPercentage > 0 {
-		totalPnl = colorGreen(totalPnl)
+	totalPnl := fmt.Sprintf("$%s (%.2f%%)", lib.FormatPrice("%.2f", holdingStat.TotalPnlAmount), holdingStat.TotalPnlPercentage)
+	if holdingStat.TotalPnlPercentage > 0 {
+		totalPnl = style.ColorGreen(totalPnl)
 	}
-	if totalPnlPercentage < 0 {
-		totalPnl = colorRed(totalPnl)
+	if holdingStat.TotalPnlPercentage < 0 {
+		totalPnl = style.ColorRed(totalPnl)
 	}
 
 	renderedContents = append(renderedContents, fmt.Sprintf("PnL: %s", totalPnl))
@@ -136,17 +124,17 @@ func (h *Handler) View_ListTransaction(app *App) string {
 
 	headerFormat := "%-7s %-20s %-10s %-16s %-15s %-11s"
 	header := fmt.Sprintf(headerFormat, "", "Datetime", "Token", "Market Price", "Quantity", "Amount")
-	renderedContents = append(renderedContents, styleBold(colorCyan(header)))
+	renderedContents = append(renderedContents, style.FontBold(style.ColorCyan(header)))
 
 	dataFormat := "%-7s %-20s %-10s $%-15s %-15g $%-10s"
 
 	for _, transaction := range transactions {
-		transactionType := styleItalic(fmt.Sprintf("%-7s", fmt.Sprintf("(%s)", transaction.TransactionType)))
-		if transaction.TransactionType == "BUY" {
-			transactionType = colorGreen(transactionType)
+		transactionType := style.FontItalic(fmt.Sprintf("%-7s", fmt.Sprintf("(%s)", transaction.TransactionType)))
+		if transaction.TransactionType == constant.TransactionTypeBuy {
+			transactionType = style.ColorGreen(transactionType)
 		}
-		if transaction.TransactionType == "SELL" {
-			transactionType = colorRed(transactionType)
+		if transaction.TransactionType == constant.TransactionTypeSell {
+			transactionType = style.ColorRed(transactionType)
 		}
 		renderedContents = append(renderedContents, fmt.Sprintf(dataFormat, transactionType, transaction.Date, transaction.Token, lib.FormatPrice("%g", transaction.MarketPrice), transaction.Quantity, lib.FormatPrice("%.2f", transaction.Amount)))
 	}

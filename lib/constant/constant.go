@@ -7,3 +7,8 @@ const (
 	ModeListTransaction
 	ModeCreateTransaction
 )
+
+const (
+	TransactionTypeBuy  = "BUY"
+	TransactionTypeSell = "SELL"
+)
