@@ -41,13 +41,9 @@ func (h *Handler) Update_ListTransaction(app *App, msg tea.KeyMsg) (cmds []tea.C
 		app.ListTransaction.SelectedChoice = app.ListTransaction.Choices[app.ListTransaction.Cursor]
 		app.ListTransaction.IsLoading = true
 
-		tokens := map[string]string{
-			"BTC":  "bitcoin",
-			"HYPE": "hyperliquid",
-		}
 		queryParams := map[string]string{
 			"vs_currency": "usd",
-			"ids":         tokens[app.ListTransaction.SelectedChoice],
+			"ids":         app.ListTransaction.Tokens[app.ListTransaction.SelectedChoice],
 			"precision":   "2",
 		}
 

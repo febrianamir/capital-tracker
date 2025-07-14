@@ -9,7 +9,7 @@ import (
 
 func (h *Handler) Update_Menu(app *App, msg tea.KeyMsg) tea.Cmd {
 	switch msg.String() {
-	case "q":
+	case "q", "ctrl+c":
 		return tea.Quit
 
 	case "up":

@@ -40,6 +40,7 @@ type ListWatchlist struct {
 type ListTransaction struct {
 	Cursor           int
 	Choices          []string
+	Tokens           map[string]string
 	SelectedChoice   string
 	IsLoading        bool
 	CoinListResponse response.CoinList
@@ -66,11 +67,15 @@ func InitApp(handler Handler) App {
 	s.Spinner = spinner.Dot
 	s.Style = spinnerStyle
 
-	tokens, _ := handler.repo.GetTransactionTokens()
+	listTransactionChoiches, _ := handler.repo.GetTransactionTokens()
 	isWatchlist := true
 	watchlists, _ := handler.repo.GetTokens(param.GetTokens{
 		IsWatchlist: &isWatchlist,
 	})
+	tokens := map[string]string{}
+	for _, watchlist := range watchlists {
+		tokens[watchlist.Symbol] = watchlist.ApiId
+	}
 
 	return App{
 		Handler: handler,
@@ -91,7 +96,8 @@ func InitApp(handler Handler) App {
 		},
 		ListTransaction: ListTransaction{
 			Cursor:         0,
-			Choices:        tokens,
+			Choices:        listTransactionChoiches,
+			Tokens:         tokens,
 			SelectedChoice: "",
 		},
 		CreateTransaction: CreateTransaction{
